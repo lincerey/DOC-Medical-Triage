@@ -1,0 +1,433 @@
+
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOC — Triage Médico Inteligente</title>
+    <meta name="description" content="Asistente de pre-consulta médica con razonamiento savant">
+    <style>
+        :root {
+            --primary: #1a7a5c;
+            --primary-light: #e8f5f0;
+            --danger: #d32f2f;
+            --warning: #f57c00;
+            --ok: #388e3c;
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #0d4f3a, #1a7a5c);
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header-logo {
+            width: 52px;
+            height: 52px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .header p {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            flex: 1;
+            width: 100%;
+        }
+        .disclaimer-card {
+            background: #fff3e0;
+            border-left: 4px solid var(--warning);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #5d4037;
+        }
+        .disclaimer-card strong { color: var(--danger); }
+        .input-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s;
+            background: #fafbfc;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background: #0d4f3a; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        .btn-secondary:hover { background: var(--primary-light); }
+        .spinner { display: none; }
+        .btn.loading .spinner { display: inline-block; animation: spin 0.8s linear infinite; }
+        .btn.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .response-card {
+            display: none;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+        .response-card.visible { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        .urgency-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+        .urgency-emergency { background: #ffebee; color: var(--danger); }
+        .urgency-high { background: #fff3e0; color: var(--warning); }
+        .urgency-non-urgent { background: #e8f5e9; color: var(--ok); }
+
+        .recommendation {
+            background: #f0fdf4;
+            border-left: 4px solid var(--ok);
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .conditions-list { margin: 16px 0; }
+        .condition-item {
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border-left: 3px solid var(--primary);
+            font-size: 14px;
+        }
+
+        .red-flags { margin: 12px 0; }
+        .red-flag {
+            background: #fff5f5;
+            border: 1px solid #fecaca;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: var(--danger);
+        }
+
+        .questions-section { margin: 16px 0; }
+        .question-item {
+            background: var(--primary-light);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .question-item:hover { background: #d0ede2; }
+        .question-item::before { content: "💬 "; }
+
+        .meta-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .history-section { margin-top: 24px; display: none; }
+        .history-section.visible { display: block; }
+        .history-item {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            font-size: 13px;
+            cursor: pointer;
+            border-left: 3px solid var(--border);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        @media (min-width: 640px) {
+            .container { padding: 32px 24px; }
+            .header { padding: 24px 40px; }
+            .header h1 { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-logo">🥼</div>
+        <div>
+            <h1>DOC · Triage Médico</h1>
+            <p>Asistente de pre-consulta con razonamiento clínico avanzado</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="disclaimer-card">
+            <strong>⚠️ IMPORTANTE:</strong> DOC es una herramienta de orientación, no reemplaza una consulta médica. 
+            En caso de emergencia (dolor en el pecho, dificultad para respirar, sangrado abundante, pérdida de conciencia), 
+            <strong>llame al 107/911 o acuda a emergencias de inmediato.</strong>
+        </div>
+
+        <div class="input-card">
+            <textarea id="symptomInput" placeholder="Describa sus síntomas con el mayor detalle posible...&#10;&#10;Ej: Hace 3 días empecé con dolor de cabeza intenso en la frente, fiebre de 38.5°C y congestión nasal. También siento presión en los ojos."></textarea>
+            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn" id="submitBtn" onclick="analyzeSymptoms()">
+                    <span class="btn-text">🔍 Analizar Síntomas</span>
+                    <span class="spinner">⏳</span>
+                </button>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(1)">Dolor cabeza + fiebre</button>
+                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(2)">Dolor abdominal</button>
+                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(3)">Falta de aire</button>
+            </div>
+        </div>
+
+        <div class="response-card" id="responseCard">
+            <div id="urgencyBadge"></div>
+            <h3 style="margin-bottom:8px; font-size:18px;">📋 Evaluación Clínica</h3>
+            <div id="recommendation"></div>
+
+            <div id="conditionsList" class="conditions-list"></div>
+            <div id="redFlags" class="red-flags"></div>
+
+            <div id="questionsSection" class="questions-section">
+                <h4 style="font-size:14px; color:var(--text-muted); margin-bottom:8px;">🔎 Preguntas para precisar el diagnóstico:</h4>
+                <div id="questionsList"></div>
+            </div>
+
+            <div id="disclaimer" style="margin-top:12px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12px; color:#5d4037;"></div>
+
+            <div class="meta-row" id="metaInfo"></div>
+        </div>
+
+        <div class="history-section" id="historySection">
+            <h3 style="font-size:16px; margin-bottom:12px;">📜 Consultas Anteriores</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        DOC v1.0.0 — Medical Intelligence System · Sistema de apoyo al triage · No reemplaza evaluación profesional
+    </div>
+
+    <script>
+        const API = "/api/v1";
+        let currentPatientId = "";
+        let loadedHistory = false;
+
+        function setExample(n) {
+            const examples = [
+                "Hace 3 días empecé con dolor de cabeza intenso en la frente y detrás de los ojos. Tengo fiebre de 38.5°C, congestión nasal, y presión en los senos paranasales. Siento fatiga general y malestar.",
+                "Desde ayer tengo dolor en la parte baja del abdomen, del lado derecho. Es un dolor constante que empeora cuando toso o me muevo. También tuve náuseas pero no vomité. No tengo fiebre.",
+                "Desde esta mañana siento que me falta el aire. Me duele el pecho al respirar profundo y tengo tos seca. Estoy preocupado porque empeora cuando camino. Tengo 39°C de fiebre."
+            ];
+            document.getElementById('symptomInput').value = examples[n-1];
+        }
+
+        async function analyzeSymptoms() {
+            const input = document.getElementById('symptomInput');
+            const btn = document.getElementById('submitBtn');
+            const card = document.getElementById('responseCard');
+
+            const text = input.value.trim();
+            if (!text) { input.focus(); return; }
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+            card.classList.remove('visible');
+
+            try {
+                const body = { symptoms: text };
+                if (currentPatientId) body.patient_id = currentPatientId;
+
+                const resp = await fetch(`${API}/triage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await resp.json();
+                currentPatientId = currentPatientId || data.symptoms_parsed?._raw_text?.substring(0,16) || "paciente_" + Date.now().toString(36);
+
+                renderResponse(data);
+                card.classList.add('visible');
+
+                if (!loadedHistory) loadHistory();
+            } catch (err) {
+                alert("Error al conectar con DOC: " + err.message);
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        function renderResponse(data) {
+            const urgency = data.urgency || "non-urgent";
+            const badge = document.getElementById('urgencyBadge');
+            const labels = { emergency: "🚨 URGENCIA — ACUDA A EMERGENCIAS", high: "⚠️ ALTA PRIORIDAD — Consulte urgente", "non-urgent": "✅ Baja Prioridad — Monitoreo domiciliario" };
+            badge.className = `urgency-badge urgency-${urgency}`;
+            badge.textContent = labels[urgency] || labels["non-urgent"];
+
+            document.getElementById('recommendation').innerHTML = data.recommendation 
+                ? `<div class="recommendation">${data.recommendation}</div>` 
+                : '';
+
+            // Conditions
+            const conditions = data.analysis?.possible_conditions || [];
+            const condHtml = conditions.length ? conditions.map(c => 
+                `<div class="condition-item">${c.name || c}</div>`
+            ).join('') : '<div class="condition-item" style="color:var(--text-muted);">Analizando patrones sintomáticos...</div>';
+            document.getElementById('conditionsList').innerHTML = 
+                `<h4 style="font-size:14px; color:var(--text-muted); margin-bottom:8px;">🏥 Posibles escenarios clínicos:</h4>${condHtml}`;
+
+            // Red flags
+            const flags = data.red_flags || [];
+            const flagHtml = flags.length ? 
+                `<h4 style="font-size:14px; color:var(--danger); margin-bottom:6px;">🔴 Signos de Alarma Detectados:</h4>
+                 ${flags.map(f => `<div class="red-flag">🚨 ${f.keyword} — ${f.urgency === 'emergency' ? 'EMERGENCIA' : 'URGENTE'}</div>`).join('')}` : '';
+            document.getElementById('redFlags').innerHTML = flagHtml;
+
+            // Questions
+            const questions = data.suggested_questions || data.analysis?.suggested_questions || [];
+            if (questions.length) {
+                document.getElementById('questionsSection').style.display = 'block';
+                document.getElementById('questionsList').innerHTML = questions.map(q => 
+                    `<div class="question-item" onclick="document.getElementById('symptomInput').value += '\n\n${q.replace(/'/g, "\'")}'; window.scrollTo(0,0);">${q}</div>`
+                ).join('');
+            } else {
+                document.getElementById('questionsSection').style.display = 'none';
+            }
+
+            // Disclaimer
+            document.getElementById('disclaimer').textContent = data.disclaimer || "⚠️ ESTO NO ES UN DIAGNÓSTICO MÉDICO. Consulte siempre con un profesional de la salud.";
+
+            // Meta
+            const meta = document.getElementById('metaInfo');
+            meta.innerHTML = `
+                <span>🧠 Confianza: ${Math.round(data.confidence * 100)}%</span>
+                <span>📚 Casos similares: ${data.similar_cases || 0}</span>
+                <span>⚡ ${data.processing_time_s || 0}s</span>
+                <span>🆔 #${data.consultation_id || '-'}</span>
+            `;
+        }
+
+        async function loadHistory() {
+            if (!currentPatientId) return;
+            loadedHistory = true;
+            try {
+                const resp = await fetch(`${API}/history/${currentPatientId}`);
+                const data = await resp.json();
+                const list = document.getElementById('historyList');
+                const section = document.getElementById('historySection');
+                if (data.consultations?.length) {
+                    section.classList.add('visible');
+                    list.innerHTML = data.consultations.map(c => 
+                        `<div class="history-item">
+                            <strong>${new Date(c.created_at * 86400 * 1000).toLocaleDateString() || 'Reciente'}</strong> — 
+                            ${c.symptoms_raw?.substring(0, 80)}...
+                        </div>`
+                    ).join('');
+                }
+            } catch(e) {}
+        }
+
+        // Enter to submit
+        document.getElementById('symptomInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                analyzeSymptoms();
+            }
+        });
+    </script>
+</body>
+</html>
