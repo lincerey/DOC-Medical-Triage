@@ -1,0 +1,39 @@
+DOC — Instalador para Windows
+==============================
+
+ARCHIVOS:
+  install.bat          → Doble click y se instala solo
+  src/                 → Codigo fuente
+  frontend/            → Interfaz web
+  build/               → Scripts de compilacion
+  requirements.txt     → Dependencias
+
+METODO 1 — INSTALACION AUTOMATICA (Recomendado)
+------------------------------------------------
+1. Doble click en install.bat (o "Ejecutar como Administrador")
+
+   El script:
+   - Verifica Python
+   - Instala dependencias
+   - Compila DOC.exe
+   - Instala en C:\Program Files\DOC\
+   - Crea acceso directo en Escritorio
+   - Crea acceso en Menu Inicio
+   - Crea desinstalador
+
+2. Doble click en "DOC" del escritorio
+3. Abrir http://localhost:8080
+
+METODO 2 — MANUAL
+-----------------
+   pip install pyinstaller
+   pyinstaller --onefile --name DOC ^
+     --add-data "frontend;frontend" ^
+     --hidden-import uvicorn.logging ^
+     --strip ^
+     src/main.py
+   dist\DOC.exe
+
+DESINSTALAR
+-----------
+   Ejecutar: C:\Program Files\DOC\uninstall.bat
