@@ -1,433 +1,274 @@
-
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOC — Triage Médico Inteligente</title>
-    <meta name="description" content="Asistente de pre-consulta médica con razonamiento savant">
+    <!-- Tailwind CSS Pinned Release for beautiful general layouts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#070913',
+                        clinical: '#0d1122',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        :root {
-            --primary: #1a7a5c;
-            --primary-light: #e8f5f0;
-            --danger: #d32f2f;
-            --warning: #f57c00;
-            --ok: #388e3c;
-            --bg: #f5f7fa;
-            --card: #ffffff;
-            --text: #1a1a2e;
-            --text-muted: #6b7280;
-            --border: #e2e8f0;
-            --radius: 12px;
-            --shadow: 0 2px 12px rgba(0,0,0,0.06);
-        }
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            line-height: 1.6;
-        }
-        .header {
-            background: linear-gradient(135deg, #0d4f3a, #1a7a5c);
-            color: white;
-            padding: 20px 24px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .header-logo {
-            width: 52px;
-            height: 52px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            flex-shrink: 0;
-        }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-        .header p {
-            font-size: 13px;
-            opacity: 0.85;
-            margin-top: 2px;
-        }
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 24px 16px;
-            flex: 1;
-            width: 100%;
-        }
-        .disclaimer-card {
-            background: #fff3e0;
-            border-left: 4px solid var(--warning);
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #5d4037;
-        }
-        .disclaimer-card strong { color: var(--danger); }
-        .input-card {
-            background: var(--card);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 24px;
-            margin-bottom: 16px;
-        }
-        textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 14px 16px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            transition: border-color 0.2s;
-            background: #fafbfc;
-        }
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: white;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 14px 28px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #0d4f3a; transform: translateY(-1px); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-        .btn-secondary {
-            background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-        }
-        .btn-secondary:hover { background: var(--primary-light); }
-        .spinner { display: none; }
-        .btn.loading .spinner { display: inline-block; animation: spin 0.8s linear infinite; }
-        .btn.loading .btn-text { display: none; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .response-card {
-            display: none;
-            background: var(--card);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 24px;
-            margin-bottom: 16px;
-            animation: fadeIn 0.3s ease;
-        }
-        .response-card.visible { display: block; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-        .urgency-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
-        }
-        .urgency-emergency { background: #ffebee; color: var(--danger); }
-        .urgency-high { background: #fff3e0; color: var(--warning); }
-        .urgency-non-urgent { background: #e8f5e9; color: var(--ok); }
-
-        .recommendation {
-            background: #f0fdf4;
-            border-left: 4px solid var(--ok);
-            padding: 14px 16px;
-            border-radius: 8px;
-            margin: 12px 0;
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        .conditions-list { margin: 16px 0; }
-        .condition-item {
-            background: #f8fafc;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            border-left: 3px solid var(--primary);
-            font-size: 14px;
-        }
-
-        .red-flags { margin: 12px 0; }
-        .red-flag {
-            background: #fff5f5;
-            border: 1px solid #fecaca;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin-bottom: 4px;
-            font-size: 13px;
-            color: var(--danger);
-        }
-
-        .questions-section { margin: 16px 0; }
-        .question-item {
-            background: var(--primary-light);
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .question-item:hover { background: #d0ede2; }
-        .question-item::before { content: "💬 "; }
-
-        .meta-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .history-section { margin-top: 24px; display: none; }
-        .history-section.visible { display: block; }
-        .history-item {
-            background: var(--card);
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-            font-size: 13px;
-            cursor: pointer;
-            border-left: 3px solid var(--border);
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 12px;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border);
-            margin-top: auto;
-        }
-
-        @media (min-width: 640px) {
-            .container { padding: 32px 24px; }
-            .header { padding: 24px 40px; }
-            .header h1 { font-size: 26px; }
-        }
+        /* Hide scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body>
-    <header class="header">
-        <div class="header-logo">🥼</div>
-        <div>
-            <h1>DOC · Triage Médico</h1>
-            <p>Asistente de pre-consulta con razonamiento clínico avanzado</p>
+<body class="bg-dark text-slate-200 min-h-screen flex flex-col no-scrollbar">
+
+    <!-- Top Navigation / Biometric HUD Banner -->
+    <header class="border-b border-cyan-500/10 bg-clinical/80 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full border border-cyan-400/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(0,242,254,0.2)] bg-dark">
+                🥼
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wider text-cyan-400 flex items-center gap-2">
+                    DOC <span class="text-xs bg-cyan-400/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-400/20">SAVANT 3.0</span>
+                </h1>
+                <p class="text-xs text-slate-400">Diagnostic Engine & Pre-Consultation Triage</p>
+            </div>
+        </div>
+        
+        <!-- Live System Heartbeat / Biometric stats -->
+        <div class="hidden md:flex items-center gap-6 text-right">
+            <div>
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest">SYSTEM STATUS</div>
+                <div class="text-xs font-mono text-emerald-400 flex items-center gap-1.5 justify-end">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> OPERATIONAL
+                </div>
+            </div>
+            <div class="border-l border-cyan-500/10 pl-6">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest">SAVANT COGNITION</div>
+                <div class="text-xs font-mono text-cyan-400">HYPERFOCUS ON</div>
+            </div>
         </div>
     </header>
 
-    <div class="container">
-        <div class="disclaimer-card">
-            <strong>⚠️ IMPORTANTE:</strong> DOC es una herramienta de orientación, no reemplaza una consulta médica. 
-            En caso de emergencia (dolor en el pecho, dificultad para respirar, sangrado abundante, pérdida de conciencia), 
-            <strong>llame al 107/911 o acuda a emergencias de inmediato.</strong>
-        </div>
-
-        <div class="input-card">
-            <textarea id="symptomInput" placeholder="Describa sus síntomas con el mayor detalle posible...&#10;&#10;Ej: Hace 3 días empecé con dolor de cabeza intenso en la frente, fiebre de 38.5°C y congestión nasal. También siento presión en los ojos."></textarea>
-            <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn" id="submitBtn" onclick="analyzeSymptoms()">
-                    <span class="btn-text">🔍 Analizar Síntomas</span>
-                    <span class="spinner">⏳</span>
+    <!-- Main Content App HUD -->
+    <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+        
+        <!-- COLUMN 1: INPUT CONSOLE & ANATOMICAL OVERLAY (lg:col-span-4) -->
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Patient / Symptoms input console -->
+            <div class="savant-card flex flex-col gap-4">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-cyan-400/40 font-mono">PANEL_01</div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                    <span>✍️</span> INGESTIÓN DE SÍNTOMAS
+                </h2>
+                <p class="text-xs text-slate-400">Describí tus síntomas con tus propias palabras. La IA hiperfocalizará tu caso en base al método científico.</p>
+                
+                <div class="relative">
+                    <textarea id="symptomInput" 
+                        class="w-full h-32 bg-dark/80 border border-cyan-500/20 rounded-lg p-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 resize-none font-sans"
+                        placeholder="Ej: Siento dolor opresivo fuerte en el pecho que se irradia al brazo izquierdo y mandíbula, además de sudoración fría y náuseas. Comenzo de forma repentina hace 20 minutos."></textarea>
+                </div>
+                
+                <button id="submitBtn" class="savant-btn w-full" onclick="analyzeSymptoms()">
+                    <span class="btn-text">🔍 EJECUTAR ESCANEO SAVANT</span>
+                    <span class="spinner hidden">⏳ ESCANEANDO...</span>
                 </button>
-            </div>
-            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(1)">Dolor cabeza + fiebre</button>
-                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(2)">Dolor abdominal</button>
-                <button class="btn btn-secondary" style="font-size:13px; padding:8px 12px; width:auto;" onclick="setExample(3)">Falta de aire</button>
-            </div>
-        </div>
-
-        <div class="response-card" id="responseCard">
-            <div id="urgencyBadge"></div>
-            <h3 style="margin-bottom:8px; font-size:18px;">📋 Evaluación Clínica</h3>
-            <div id="recommendation"></div>
-
-            <div id="conditionsList" class="conditions-list"></div>
-            <div id="redFlags" class="red-flags"></div>
-
-            <div id="questionsSection" class="questions-section">
-                <h4 style="font-size:14px; color:var(--text-muted); margin-bottom:8px;">🔎 Preguntas para precisar el diagnóstico:</h4>
-                <div id="questionsList"></div>
+                
+                <!-- Quick Hotkeys / Example Cases -->
+                <div class="flex flex-col gap-1.5 mt-2">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">EJEMPLOS RÁPIDOS DE PRUEBA:</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="setExample(1)" class="text-xs px-2.5 py-1 rounded bg-clinical border border-cyan-500/10 text-cyan-400/80 hover:bg-cyan-500/5 hover:border-cyan-500/30 transition-all">Dolor pecho + Sudor</button>
+                        <button onclick="setExample(2)" class="text-xs px-2.5 py-1 rounded bg-clinical border border-cyan-500/10 text-cyan-400/80 hover:bg-cyan-500/5 hover:border-cyan-500/30 transition-all">Fiebre + Tos seca</button>
+                        <button onclick="setExample(3)" class="text-xs px-2.5 py-1 rounded bg-clinical border border-cyan-500/10 text-cyan-400/80 hover:bg-cyan-500/5 hover:border-cyan-500/30 transition-all">Abdomen bajo derecho</button>
+                    </div>
+                </div>
             </div>
 
-            <div id="disclaimer" style="margin-top:12px; padding:10px; background:#fff8e1; border-radius:8px; font-size:12px; color:#5d4037;"></div>
+            <!-- Interactive Biometric Anatomy Hotspots -->
+            <div class="savant-card flex flex-col gap-4 items-center justify-center">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-cyan-400/40 font-mono">PANEL_02</div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 self-start">
+                    <span>🧬</span> MAPA BIOMÉTRICO ACTIVO
+                </h2>
+                
+                <!-- Stylized Interactive Human Anatomy Vector SVG -->
+                <svg class="anatomical-map my-2" viewBox="0 0 100 220">
+                    <!-- Head node -->
+                    <circle id="node_head" cx="50" cy="20" r="10" class="body-part" onclick="selectBodyPart('head')" />
+                    <text x="50" y="23" font-size="6" text-anchor="middle" fill="#00f2fe" pointer-events="none">Cabeza</text>
+                    
+                    <!-- Neck -->
+                    <rect id="node_neck" x="48" y="30" width="4" height="8" class="body-part" onclick="selectBodyPart('neck')" />
+                    
+                    <!-- Torax / Chest -->
+                    <path id="node_chest" d="M 40,38 L 60,38 L 58,80 L 42,80 Z" class="body-part" onclick="selectBodyPart('chest')" />
+                    <text x="50" y="55" font-size="6" text-anchor="middle" fill="#00f2fe" pointer-events="none">Tórax</text>
+                    
+                    <!-- Abdomen -->
+                    <path id="node_abdomen" d="M 42,80 L 58,80 L 56,120 L 44,120 Z" class="body-part" onclick="selectBodyPart('abdomen')" />
+                    <text x="50" y="100" font-size="6" text-anchor="middle" fill="#00f2fe" pointer-events="none">Abdomen</text>
+                    
+                    <!-- Limbs: Arms -->
+                    <path id="node_arm_left" d="M 38,38 L 30,90 L 34,90 L 40,46 Z" class="body-part" onclick="selectBodyPart('limbs')" />
+                    <path id="node_arm_right" d="M 62,38 L 70,90 L 66,90 L 60,46 Z" class="body-part" onclick="selectBodyPart('limbs')" />
+                    
+                    <!-- Limbs: Legs -->
+                    <path id="node_leg_left" d="M 44,120 L 40,190 L 45,190 L 49,120 Z" class="body-part" onclick="selectBodyPart('limbs')" />
+                    <path id="node_leg_right" d="M 56,120 L 60,190 L 55,190 L 51,120 Z" class="body-part" onclick="selectBodyPart('limbs')" />
+                    
+                    <!-- Glow Nodes -->
+                    <circle cx="50" cy="50" r="3" fill="#ff007f" class="pulse-node pointer-events-none" />
+                    <circle cx="50" cy="100" r="3" fill="#ff007f" class="pulse-node pointer-events-none" />
+                </svg>
+                
+                <div class="w-full text-center text-xs text-slate-400 border-t border-cyan-500/10 pt-3 flex items-center justify-between">
+                    <span>Nodo seleccionado: <strong id="selectedPart" class="text-cyan-400">Todos</strong></span>
+                    <button onclick="selectBodyPart('all')" class="text-[10px] text-cyan-400/80 underline">Resetear</button>
+                </div>
+            </div>
+        </section>
 
-            <div class="meta-row" id="metaInfo"></div>
-        </div>
+        <!-- COLUMN 2: SHAUN MURPHY SAVANT MIND MAP & LOGS (lg:col-span-4) -->
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Savant Diagnostic Thought mapping screen -->
+            <div class="savant-card flex-1 flex flex-col gap-4 min-h-[350px] relative">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-cyan-400/40 font-mono">BRAIN_03</div>
+                <div class="scan-line"></div>
+                
+                <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400">
+                    🧠 MAPA MENTAL SAVANT (CEREBRO AUTISTA 3.0)
+                </h2>
+                
+                <!-- Floating Formula / Connections Overlay Container -->
+                <div id="mindMapCanvas" class="flex-1 bg-dark/80 rounded border border-cyan-500/10 relative overflow-hidden flex flex-col items-center justify-center p-4">
+                    
+                    <!-- Holographic blueprint elements -->
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,242,254,0.08)_0%,transparent_70%)]"></div>
+                    
+                    <!-- Molecular blueprint formula models background -->
+                    <div class="molecule-bg top-4 left-4">C₈H₉NO₂ (Paracetamol)</div>
+                    <div class="molecule-bg bottom-4 right-4">C₁₃H₁₈O₂ (Ibuprofeno)</div>
+                    <div class="molecule-bg top-20 right-8">Na⁺ / K⁺ ATPase</div>
+                    
+                    <!-- Dynamic Glowing Thoughts (Generated by JS on triage) -->
+                    <div id="thoughtMapPlaceholder" class="text-center text-slate-500 text-xs px-6 flex flex-col items-center gap-3">
+                        <div class="w-12 h-12 rounded-full border border-cyan-400/10 flex items-center justify-center text-2xl animate-pulse text-cyan-400/40">
+                            🔬
+                        </div>
+                        <div>
+                            "La mente savant decodifica los síntomas de manera paralela e hiperfocalizada."
+                            <br><span class="text-[10px] text-slate-600 mt-2 block">Ingresá síntomas para activar visualización de árbol diagnóstico</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Grid thought network container -->
+                    <div id="activeThoughtNetwork" class="hidden w-full h-full flex flex-col justify-between p-2 relative">
+                        <!-- Connective Canvas dynamic overlays inside -->
+                    </div>
+                </div>
+            </div>
 
-        <div class="history-section" id="historySection">
-            <h3 style="font-size:16px; margin-bottom:12px;">📜 Consultas Anteriores</h3>
-            <div id="historyList"></div>
-        </div>
-    </div>
+            <!-- Real-time Savant Recursion console logs -->
+            <div class="savant-card flex flex-col gap-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <span>📟</span> CONSOLA DE RECURSIVIDAD E INGENIERÍA INVERSA
+                </h2>
+                <div id="terminalLog" class="terminal-container no-scrollbar">
+                    <div class="terminal-line text-emerald-400">Motor de Diagnóstico DOC Savant v1.0.0 listo.</div>
+                    <div class="terminal-line">Esperando entrada sintomática del paciente...</div>
+                </div>
+            </div>
+        </section>
 
-    <div class="footer">
-        DOC v1.0.0 — Medical Intelligence System · Sistema de apoyo al triage · No reemplaza evaluación profesional
-    </div>
+        <!-- COLUMN 3: CLINICAL OUTCOMES & RECOMMENDATIONS (lg:col-span-4) -->
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Main outcome / Triage details card -->
+            <div class="savant-card flex-1 flex flex-col gap-4 relative" id="outcomeCard">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-cyan-400/40 font-mono">PANEL_04</div>
+                
+                <h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+                    <span>🩺</span> EVALUACIÓN CLÍNICA Y TRAGE
+                </h2>
+                
+                <div id="responsePlaceholder" class="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs text-center py-12">
+                    <div class="text-4xl mb-3 text-cyan-400/30">🏥</div>
+                    Esperando análisis clínico para emitir nivel de urgencia y orientación diagnóstica diferencial.
+                </div>
+                
+                <!-- Real response layout container -->
+                <div id="realResponseContent" class="hidden flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-cyan-500/10 pb-3">
+                        <span id="urgencyBadge" class="badge">URGENCIA DETECTADA</span>
+                        <span id="matchConfidence" class="text-xs font-mono text-cyan-400">Match: 0%</span>
+                    </div>
+                    
+                    <!-- Diagnosis / Differential -->
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-widest block mb-1">DIAGNÓSTICO DIFERENCIAL (SAVANT RECONSTRUCTION)</span>
+                        <div id="diagnosisList" class="flex flex-col gap-2">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Triage actions & Scientific basis -->
+                    <div class="bg-clinical/50 rounded-lg p-3 border border-cyan-500/10">
+                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block mb-1">RECOMENDACIONES DIRECTAS</span>
+                        <p id="clinicalRecommendation" class="text-xs text-slate-300 leading-relaxed"></p>
+                    </div>
+                    
+                    <!-- Suggested Questions (Shaun Murphy parallel inquiry) -->
+                    <div>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-widest block mb-2">PREGUNTAS SUGERIDAS (RECURSIÓN ACTIVA)</span>
+                        <div id="suggestedQuestionsList" class="flex flex-col gap-1.5 text-xs text-slate-300">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <script>
-        const API = "/api/v1";
-        let currentPatientId = "";
-        let loadedHistory = false;
+            <!-- Cloud database / system statistics -->
+            <div class="savant-card flex flex-col gap-3">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> RED-DEBRID SYNC
+                    </span>
+                    <span id="dbSyncStatus" class="font-mono text-cyan-400">ONLINE (100%)</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 border-t border-cyan-500/10 pt-3 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-500">PACIENTES</div>
+                        <div id="statPatients" class="text-sm font-bold font-mono text-slate-200">-</div>
+                    </div>
+                    <div class="border-x border-cyan-500/10">
+                        <div class="text-[10px] text-slate-500">CONSULTAS</div>
+                        <div id="statConsults" class="text-sm font-bold font-mono text-slate-200">-</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-500">KNOWLEDGE</div>
+                        <div id="statKnowledge" class="text-sm font-bold font-mono text-slate-200">-</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </main>
 
-        function setExample(n) {
-            const examples = [
-                "Hace 3 días empecé con dolor de cabeza intenso en la frente y detrás de los ojos. Tengo fiebre de 38.5°C, congestión nasal, y presión en los senos paranasales. Siento fatiga general y malestar.",
-                "Desde ayer tengo dolor en la parte baja del abdomen, del lado derecho. Es un dolor constante que empeora cuando toso o me muevo. También tuve náuseas pero no vomité. No tengo fiebre.",
-                "Desde esta mañana siento que me falta el aire. Me duele el pecho al respirar profundo y tengo tos seca. Estoy preocupado porque empeora cuando camino. Tengo 39°C de fiebre."
-            ];
-            document.getElementById('symptomInput').value = examples[n-1];
-        }
+    <footer class="border-t border-cyan-500/10 bg-clinical/50 py-3 text-center text-[10px] text-slate-500 tracking-wider">
+        SISTEMA DE ASISTENCIA MÉDICA AL TRAIGE GENERAL HOSPTALARIO (DOC SAVANT) v1.0.0 — USO INFORMATIVO EXCLUSIVO
+    </footer>
 
-        async function analyzeSymptoms() {
-            const input = document.getElementById('symptomInput');
-            const btn = document.getElementById('submitBtn');
-            const card = document.getElementById('responseCard');
-
-            const text = input.value.trim();
-            if (!text) { input.focus(); return; }
-
-            btn.classList.add('loading');
-            btn.disabled = true;
-            card.classList.remove('visible');
-
-            try {
-                const body = { symptoms: text };
-                if (currentPatientId) body.patient_id = currentPatientId;
-
-                const resp = await fetch(`${API}/triage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-
-                const data = await resp.json();
-                currentPatientId = currentPatientId || data.symptoms_parsed?._raw_text?.substring(0,16) || "paciente_" + Date.now().toString(36);
-
-                renderResponse(data);
-                card.classList.add('visible');
-
-                if (!loadedHistory) loadHistory();
-            } catch (err) {
-                alert("Error al conectar con DOC: " + err.message);
-            } finally {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-            }
-        }
-
-        function renderResponse(data) {
-            const urgency = data.urgency || "non-urgent";
-            const badge = document.getElementById('urgencyBadge');
-            const labels = { emergency: "🚨 URGENCIA — ACUDA A EMERGENCIAS", high: "⚠️ ALTA PRIORIDAD — Consulte urgente", "non-urgent": "✅ Baja Prioridad — Monitoreo domiciliario" };
-            badge.className = `urgency-badge urgency-${urgency}`;
-            badge.textContent = labels[urgency] || labels["non-urgent"];
-
-            document.getElementById('recommendation').innerHTML = data.recommendation 
-                ? `<div class="recommendation">${data.recommendation}</div>` 
-                : '';
-
-            // Conditions
-            const conditions = data.analysis?.possible_conditions || [];
-            const condHtml = conditions.length ? conditions.map(c => 
-                `<div class="condition-item">${c.name || c}</div>`
-            ).join('') : '<div class="condition-item" style="color:var(--text-muted);">Analizando patrones sintomáticos...</div>';
-            document.getElementById('conditionsList').innerHTML = 
-                `<h4 style="font-size:14px; color:var(--text-muted); margin-bottom:8px;">🏥 Posibles escenarios clínicos:</h4>${condHtml}`;
-
-            // Red flags
-            const flags = data.red_flags || [];
-            const flagHtml = flags.length ? 
-                `<h4 style="font-size:14px; color:var(--danger); margin-bottom:6px;">🔴 Signos de Alarma Detectados:</h4>
-                 ${flags.map(f => `<div class="red-flag">🚨 ${f.keyword} — ${f.urgency === 'emergency' ? 'EMERGENCIA' : 'URGENTE'}</div>`).join('')}` : '';
-            document.getElementById('redFlags').innerHTML = flagHtml;
-
-            // Questions
-            const questions = data.suggested_questions || data.analysis?.suggested_questions || [];
-            if (questions.length) {
-                document.getElementById('questionsSection').style.display = 'block';
-                document.getElementById('questionsList').innerHTML = questions.map(q => 
-                    `<div class="question-item" onclick="document.getElementById('symptomInput').value += '\n\n${q.replace(/'/g, "\'")}'; window.scrollTo(0,0);">${q}</div>`
-                ).join('');
-            } else {
-                document.getElementById('questionsSection').style.display = 'none';
-            }
-
-            // Disclaimer
-            document.getElementById('disclaimer').textContent = data.disclaimer || "⚠️ ESTO NO ES UN DIAGNÓSTICO MÉDICO. Consulte siempre con un profesional de la salud.";
-
-            // Meta
-            const meta = document.getElementById('metaInfo');
-            meta.innerHTML = `
-                <span>🧠 Confianza: ${Math.round(data.confidence * 100)}%</span>
-                <span>📚 Casos similares: ${data.similar_cases || 0}</span>
-                <span>⚡ ${data.processing_time_s || 0}s</span>
-                <span>🆔 #${data.consultation_id || '-'}</span>
-            `;
-        }
-
-        async function loadHistory() {
-            if (!currentPatientId) return;
-            loadedHistory = true;
-            try {
-                const resp = await fetch(`${API}/history/${currentPatientId}`);
-                const data = await resp.json();
-                const list = document.getElementById('historyList');
-                const section = document.getElementById('historySection');
-                if (data.consultations?.length) {
-                    section.classList.add('visible');
-                    list.innerHTML = data.consultations.map(c => 
-                        `<div class="history-item">
-                            <strong>${new Date(c.created_at * 86400 * 1000).toLocaleDateString() || 'Reciente'}</strong> — 
-                            ${c.symptoms_raw?.substring(0, 80)}...
-                        </div>`
-                    ).join('');
-                }
-            } catch(e) {}
-        }
-
-        // Enter to submit
-        document.getElementById('symptomInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                analyzeSymptoms();
-            }
-        });
-    </script>
+    <!-- App JS Execution file -->
+    <script src="app.js"></script>
 </body>
 </html>
